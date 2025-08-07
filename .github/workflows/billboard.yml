@@ -2,8 +2,7 @@ name: Billboard Top 3
 
 on:
   schedule:
-    # 09:00 Buenos Aires (UTC-3) = 12:00 UTC
-    - cron: "0 12 * * *"
+    - cron: "0 12 * * *"   # 09:00 AR (UTC-3)
   workflow_dispatch: {}
 
 jobs:
@@ -35,3 +34,14 @@ jobs:
           HEADLESS: "1"
         run: |
           python charts_dual_billboard.py
+
+      - name: Send Telegram test (curl)
+        if: always()
+        env:
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+        run: |
+          curl -sS "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage" \
+            -d chat_id="${TG_CHAT_ID}" -d text="✅ Ping desde GitHub Actions" -D -
+
+
