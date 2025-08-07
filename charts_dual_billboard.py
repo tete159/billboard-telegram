@@ -24,10 +24,15 @@ def send_telegram(text: str):
     if not TOKEN or not CHAT_ID:
         print(f"⚠️ Falta TG_BOT_TOKEN o TG_CHAT_ID (TOKEN? {bool(TOKEN)} CHAT_ID? {bool(CHAT_ID)})")
         return
-    requests.post(
-        f"https://api.telegram.org/bot{TOKEN}/sendMessage",
-        data={"chat_id": CHAT_ID, "text": text}
-    )
+    try:
+        r = requests.post(
+            f"https://api.telegram.org/bot{TOKEN}/sendMessage",
+            data={"chat_id": CHAT_ID, "text": text, "disable_web_page_preview": True}
+        )
+        print("Telegram response:", r.status_code, r.text[:300])
+    except Exception as e:
+        print("Error enviando a Telegram:", e)
+
 
 def get_top3_msg(url: str, banned: set, titulo: str) -> str:
     opts = Options()
