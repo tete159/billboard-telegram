@@ -11,7 +11,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 load_dotenv()
 
 TOKEN   = os.getenv("TG_BOT_TOKEN")
-CHAT_ID = int(os.getenv("TG_CHAT_ID", "6210116599"))
+CHAT_ID = os.getenv("TG_CHAT_ID")
 HEADLESS = os.getenv("HEADLESS", "1") != "0"
 
 URL_AR = "https://billboard.ar/billboard-charts/"
@@ -22,10 +22,12 @@ BANNED_US = {"Songwriter(s):", "Producer(s)", "Imprint/Label", "Distributor:", "
 
 def send_telegram(text: str):
     if not TOKEN or not CHAT_ID:
-        print("⚠️ Falta TG_BOT_TOKEN o TG_CHAT_ID")
+        print(f"⚠️ Falta TG_BOT_TOKEN o TG_CHAT_ID (TOKEN? {bool(TOKEN)} CHAT_ID? {bool(CHAT_ID)})")
         return
-    requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage",
-                  data={"chat_id": CHAT_ID, "text": text})
+    requests.post(
+        f"https://api.telegram.org/bot{TOKEN}/sendMessage",
+        data={"chat_id": CHAT_ID, "text": text}
+    )
 
 def get_top3_msg(url: str, banned: set, titulo: str) -> str:
     opts = Options()
