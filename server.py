@@ -5,10 +5,10 @@ import httpx
 
 app = FastAPI()
 
-GH_PAT = os.getenv("GH_PAT")          # PAT con Actions: Read & Write
-GH_REPO = os.getenv("GH_REPO")        # ej: "tete159/billboard-telegram"
+GH_PAT = os.getenv("GH_PAT")
+GH_REPO = os.getenv("GH_REPO")               # ej: "tete159/billboard-telegram"
 WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "hook")
-ALLOWED_CHAT_ID = os.getenv("TG_CHAT_ID")  # opcional
+ALLOWED_CHAT_ID = os.getenv("TG_CHAT_ID")    # opcional: limitar quién dispara
 
 def _must_have():
     if not GH_PAT or not GH_REPO:
@@ -17,6 +17,22 @@ def _must_have():
 @app.get("/health")
 def health():
     return {"ok": True}
+
+@app.get("/debug/gh/{secret}")
+async def gh_check(secret: str):
+    if secret != WEBHOOK_SECRET:
+        raise HTTPException(403, "bad secret")
+    async with httpx.AsyncClient(timeout=15) as http:
+        r = await http.get(
+            "https://api.github.com/user",
+            headers={"Authorization": f"Bearer {GH_PAT}",
+                     "Accept": "application/vnd.github+json"},
+        )
+    try:
+        body = r.json()
+    except Exception:
+        body = r.text[:300]
+    return {"status": r.status_code, "body": body}
 
 @app.get("/trigger/{secret}")
 async def trigger(secret: str, chat_id: str):
@@ -60,15 +76,4 @@ async def telegram(secret: str, req: Request):
         )
     print(">> Dispatch to GitHub:", r.status_code, r.text[:200])
     return {"status": r.status_code}
-@app.get("/debug/gh/{secret}")
-async def gh_check(secret: str):
-    if secret != os.getenv("WEBHOOK_SECRET", "hook"):
-        raise HTTPException(403, "bad secret")
-    async with httpx.AsyncClient(timeout=15) as http:
-        r = await http.get(
-            "https://api.github.com/user",
-            headers={"Authorization": f"Bearer {os.getenv('GH_PAT')}",
-                     "Accept": "application/vnd.github+json"},
-        )
-    return {"status": r.status_code, "body": r.json() if r.status_code == 200 else r.text[:200]}
 
