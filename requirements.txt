@@ -2,3 +2,7 @@ selenium
 webdriver-manager
 requests
 python-dotenv
+fastapi
+uvicorn
+httpx
+
