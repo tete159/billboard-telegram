@@ -13,7 +13,7 @@ TOKEN   = os.getenv("TG_BOT_TOKEN")
 CHAT_ID = os.getenv("TG_CHAT_ID")
 HEADLESS = os.getenv("HEADLESS", "1") != "0"
 
-URL_AR = "https://billboard.ar/billboard-charts/"
+URL_AR = "https://www.billboard.com/charts/billboard-argentina-hot-100/"
 URL_US = "https://www.billboard.com/charts/hot-100/"
 
 def send(text):
