@@ -1,48 +1,36 @@
+# .github/workflows/billboard.yml
 name: Billboard Top 3
 
 on:
   schedule:
-    - cron: "0 12 * * *"   # 12:00 UTC = 09:00 AR
-  workflow_dispatch: {}
-
+    - cron: "0 12 * * *"   # 09:00 AR
+  workflow_dispatch:
+    inputs:
+      chat_id:
+        description: "Override chat id"
+        required: false
+  repository_dispatch:
+    types: [telegram_top]
 
 jobs:
   run:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-
-      - name: Setup Chrome
-        uses: browser-actions/setup-chrome@v1
-        with:
-          chrome-version: stable
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
+      - uses: actions/checkout@v4
+      - uses: browser-actions/setup-chrome@v1
+        with: { chrome-version: stable }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
       - name: Install deps
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-
       - name: Run scraper
         env:
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
-          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+          # Prioridad: input manual > payload del webhook > secret por defecto
+          TG_CHAT_ID: ${{ github.event.inputs.chat_id || github.event.client_payload.chat_id || secrets.TG_CHAT_ID }}
           HEADLESS: "1"
-        run: |
-          python charts_dual_billboard.py
-
-      - name: Send Telegram test (curl)
-        if: always()
-        env:
-          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
-          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
-        run: |
-          curl -sS "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage" \
-            -d chat_id="${TG_CHAT_ID}" -d text="✅ Ping desde GitHub Actions" -D -
+        run: python charts_dual_billboard.py
 
 
