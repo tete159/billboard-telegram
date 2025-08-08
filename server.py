@@ -60,4 +60,15 @@ async def telegram(secret: str, req: Request):
         )
     print(">> Dispatch to GitHub:", r.status_code, r.text[:200])
     return {"status": r.status_code}
+@app.get("/debug/gh/{secret}")
+async def gh_check(secret: str):
+    if secret != os.getenv("WEBHOOK_SECRET", "hook"):
+        raise HTTPException(403, "bad secret")
+    async with httpx.AsyncClient(timeout=15) as http:
+        r = await http.get(
+            "https://api.github.com/user",
+            headers={"Authorization": f"Bearer {os.getenv('GH_PAT')}",
+                     "Accept": "application/vnd.github+json"},
+        )
+    return {"status": r.status_code, "body": r.json() if r.status_code == 200 else r.text[:200]}
 
