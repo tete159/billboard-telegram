@@ -2,10 +2,8 @@ name: Billboard Top 3
 
 on:
   schedule:
-    # 20:50 Buenos Aires (UTC-3) = 23:50 UTC
-    - cron: "50 23 * * *"
+    - cron: "*/5 * * * *"
   workflow_dispatch: {}
-
 
 jobs:
   run:
