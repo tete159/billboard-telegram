@@ -62,6 +62,12 @@ async def telegram(secret: str, req: Request):
     chat = msg.get("chat") or {}
     chat_id = str(chat.get("id") or "")
 
+    # 🔽🔽🔽 FILTRO: solo responde si el mensaje empieza con /top
+    text = (msg.get("text") or "").strip().lower()
+    if not text.startswith("/scrap"):
+        return {"ok": True}
+    # 🔼🔼🔼
+
     if ALLOWED_CHAT_ID and chat_id != str(ALLOWED_CHAT_ID):
         print(">> Ignorado por ALLOWED_CHAT_ID")
         return {"ok": True}
