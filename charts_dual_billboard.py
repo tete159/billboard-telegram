@@ -66,6 +66,24 @@ def get_top3_msg(url: str, banned: set, titulo: str) -> str:
         return f"🎵 {titulo}\n" + "\n".join(f"{i+1}. {t} — {a}" for i,(t,a) in enumerate(top3))
     finally:
         driver.quit()
+from datetime import date
+
+def build_rows(chart, url, pairs, top_n=10):
+    """
+    pairs: lista [(title, artists), ...]
+    """
+    today = date.today().isoformat()
+    out = []
+    for i, (t, a) in enumerate(pairs[:top_n], start=1):
+        out.append({
+            "chart": chart,
+            "scraped_on": today,
+            "position": i,
+            "title": t,
+            "artists": a,
+            "source_url": url
+        })
+    return out
 
 if __name__ == "__main__":
     msg_ar = get_top3_msg(URL_AR, BANNED_AR, "Top 3 Billboard Argentina (semana)")
