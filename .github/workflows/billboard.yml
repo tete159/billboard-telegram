@@ -2,8 +2,9 @@ name: Billboard Top 3
 
 on:
   schedule:
-    - cron: "*/1 * * * *"
+    - cron: "0 12 * * *"   # 12:00 UTC = 09:00 AR
   workflow_dispatch: {}
+
 
 jobs:
   run:
