@@ -2,6 +2,7 @@
 import os, json, requests
 from dotenv import load_dotenv
 from datetime import date
+from sheets_io import append_rows_dedup
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -149,7 +150,12 @@ def build_rows(chart, url, pairs, top_n=10):
             "source_url": url
         })
     return out
-
+# ...después de scrapear y armar rows con build_rows(...)
+append_rows_dedup(
+    spreadsheet_id=os.getenv("GSHEET_ID"),
+    worksheet_name="chart_items",
+    rows=rows
+)
 # ==== MAIN ====
 if __name__ == "__main__":
     # scrape
