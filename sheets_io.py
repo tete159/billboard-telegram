@@ -1,14 +1,24 @@
-# ====== Google Sheets helper ======
+# sheets_io.py
 import os, json, gspread
 
+# ⚠️ SOLO si insistís en hardcodear:
+SERVICE_ACCOUNT_JSON = r"""{
+  "type": "service_account",
+  "project_id": "...",
+  "private_key_id": "...",
+  "private_key": "-----BEGIN PRIVATE KEY-----\n...TU CLAVE...\n-----END PRIVATE KEY-----\n",
+  "client_email": "...@....iam.gserviceaccount.com",
+  "client_id": "...",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "...",
+  "universe_domain": "googleapis.com"
+}"""
+
 def _gc():
-    raw = os.getenv("GCP_SA_JSON")
-    if not raw:
-        raise RuntimeError("Falta GCP_SA_JSON")
-    try:
-        info = json.loads(raw)
-    except json.JSONDecodeError:
-        raise RuntimeError("GCP_SA_JSON no es JSON válido")
+    raw = os.getenv("GCP_SA_JSON") or SERVICE_ACCOUNT_JSON  # <-- fallback
+    info = json.loads(raw)
     return gspread.service_account_from_dict(info)
 
 def _open_sheet(spreadsheet_id):
