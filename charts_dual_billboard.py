@@ -121,7 +121,7 @@ if __name__ == "__main__":
     rows += build_rows("US Hot 100", URL_US, us_pairs, top_n=10)
 
     append_rows_dedup(
-        spreadsheet_id=os.getenv("1f6sBU8vWL9nTiUXwNNxNzLcNO1P6UgMrHuoXfnSKSVA"),
+        spreadsheet_id="1f6sBU8vWL9nTiUXwNNxNzLcNO1P6UgMrHuoXfnSKSVA",
         worksheet_name="chart_items",
         rows=rows
     )
