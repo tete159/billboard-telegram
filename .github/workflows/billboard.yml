@@ -28,9 +28,8 @@ jobs:
       - name: Run scraper
         env:
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
-          # Prioridad: input manual > payload del webhook > secret por defecto
-          TG_CHAT_ID: ${{ github.event.inputs.chat_id || github.event.client_payload.chat_id || secrets.TG_CHAT_ID }}
+          TG_CHAT_ID:   ${{ github.event.inputs.chat_id || github.event.client_payload.chat_id || secrets.TG_CHAT_ID }}
+          GCP_SA_JSON:  ${{ secrets.GCP_SA_JSON }}   # <-- agrega esto
+          GSHEET_ID:    ${{ secrets.GSHEET_ID }}     # <-- y esto
           HEADLESS: "1"
         run: python charts_dual_billboard.py
-
-
