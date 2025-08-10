@@ -121,9 +121,10 @@ if __name__ == "__main__":
     ar_pairs = scrape_pairs(URL_AR, BANNED_AR, limit=10)
     us_pairs = scrape_pairs(URL_US, BANNED_US, limit=10)
 
-    # Telegram (Top 3)
-    msg = compose_msg("Top 3 Billboard Argentina (semana)", ar_pairs, 3) + \
-          "\n\n" + compose_msg("Top 3 Billboard Hot 100 (US)", us_pairs, 3)
+    # Telegram (Top 10)
+    msg = compose_msg("Top 10 Billboard Argentina (semana)", ar_pairs, 10) + \
+          "\n\n" + compose_msg("Top 10 Billboard Hot 100 (US)", us_pairs, 10)
+
     print(msg)
     send_telegram(msg)
 
