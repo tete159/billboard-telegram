@@ -88,6 +88,18 @@ def compose_msg(title: str, pairs, k=3):
         lines.append(f"{i}. {t} — {a}")
     return "\n".join(lines)
 
+def build_top_message(n=10):
+    ar_pairs = scrape_pairs(URL_AR, BANNED_AR, limit=n)
+    us_pairs = scrape_pairs(URL_US, BANNED_US, limit=n)
+    return compose_msg(f"Top {n} Billboard Argentina (semana)", ar_pairs, n) + \
+           "\n\n" + compose_msg(f"Top {n} Billboard Hot 100 (US)", us_pairs, n)
+
+def send_top_telegram(n=10):
+    msg = build_top_message(n)
+    print(msg)
+    send_telegram(msg)
+    return msg
+
 # ==== Armar filas para Sheets ====
 def build_rows(chart, url, pairs, top_n=10):
     today = date.today().isoformat()
@@ -109,9 +121,10 @@ if __name__ == "__main__":
     ar_pairs = scrape_pairs(URL_AR, BANNED_AR, limit=10)
     us_pairs = scrape_pairs(URL_US, BANNED_US, limit=10)
 
-    # Telegram (Top 3)
-    msg = compose_msg("Top 3 Billboard Argentina (semana)", ar_pairs, 3) + \
-          "\n\n" + compose_msg("Top 3 Billboard Hot 100 (US)", us_pairs, 3)
+    # Telegram (Top 10)
+    msg = compose_msg("Top 10 Billboard Argentina (semana)", ar_pairs, 10) + \
+          "\n\n" + compose_msg("Top 10 Billboard Hot 100 (US)", us_pairs, 10)
+
     print(msg)
     send_telegram(msg)
 

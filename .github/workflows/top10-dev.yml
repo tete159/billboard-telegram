@@ -1,0 +1,35 @@
+name: Top10 Dev (rama)
+
+on:
+  workflow_dispatch:
+    inputs:
+      chat_id:
+        description: "Override chat id"
+        required: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: browser-actions/setup-chrome@v1
+        with: { chrome-version: stable }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Llamamos a la función fuera del main
+      - name: Send Telegram Top 10 (dev)
+        env:
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          TG_CHAT_ID:   ${{ github.event.inputs.chat_id || secrets.TG_CHAT_ID }}
+          HEADLESS: "1"
+        run: |
+          python - <<'PY'
+          from charts_dual_billboard import send_top_telegram
+          send_top_telegram(n=10)
+          PY
