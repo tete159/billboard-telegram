@@ -1,5 +1,5 @@
 # charts_dual_billboard.py
-import os, json, requests
+import os, json, requests, time
 from dotenv import load_dotenv
 from datetime import date
 from sheets_io import append_rows_dedup  # <- tu helper de Sheets
@@ -11,6 +11,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
+from selenium.common.exceptions import TimeoutException
 
 load_dotenv()
 
@@ -41,7 +42,7 @@ def send_telegram(text: str):
         print("Error enviando a Telegram:", e)
 
 # ==== Scraping genérico: devuelve pares (title, artists) ====
-def scrape_pairs(url: str, banned: set, limit: int = 10):
+def scrape_pairs(url: str, banned: set, limit: int = 10, max_retries: int = 3):
     opts = Options()
     if HEADLESS:
         opts.add_argument("--headless=new")
@@ -49,38 +50,63 @@ def scrape_pairs(url: str, banned: set, limit: int = 10):
     opts.add_argument("--disable-dev-shm-usage")
     opts.add_argument("--window-size=1280,2400")
     opts.add_argument("user-agent=Mozilla/5.0")
+    opts.add_argument("--disable-blink-features=AutomationControlled")
+    opts.page_load_strategy = 'eager'  # No espera a que cargue TODO
 
-    d = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=opts)
-    try:
-        d.get(url)
-        WebDriverWait(d, 25).until(
-            EC.presence_of_all_elements_located((By.CSS_SELECTOR, "h3#title-of-a-story"))
-        )
+    for attempt in range(max_retries):
+        d = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=opts)
+        try:
+            # Aumentar timeouts
+            d.set_page_load_timeout(180)  # 3 minutos
+            d.implicitly_wait(15)
+            
+            print(f"🔄 Intento {attempt + 1}/{max_retries} para {url}")
+            d.get(url)
+            
+            WebDriverWait(d, 30).until(  # Aumentado de 25 a 30
+                EC.presence_of_all_elements_located((By.CSS_SELECTOR, "h3#title-of-a-story"))
+            )
 
-        # títulos
-        titles = []
-        for e in d.find_elements(By.CSS_SELECTOR, "h3#title-of-a-story"):
-            t = (e.get_attribute("innerText") or e.get_attribute("textContent") or "").strip()
-            if t and t not in banned:
-                titles.append(t)
+            # títulos
+            titles = []
+            for e in d.find_elements(By.CSS_SELECTOR, "h3#title-of-a-story"):
+                t = (e.get_attribute("innerText") or e.get_attribute("textContent") or "").strip()
+                if t and t not in banned:
+                    titles.append(t)
 
-        # artistas (dos variantes)
-        artists = [el.get_attribute("innerText").strip() for el in d.find_elements(
-            By.CSS_SELECTOR, "span.c-label.a-no-trucate.a-color-artist, a.c-label.a-no-trucate.a-link"
-        )]
-        if len(artists) < len(titles):
-            artists += [el.get_attribute("innerText").strip() for el in
-                        d.find_elements(By.CSS_SELECTOR, "span.c-label.a-no-trucate")]
+            # artistas (dos variantes)
+            artists = [el.get_attribute("innerText").strip() for el in d.find_elements(
+                By.CSS_SELECTOR, "span.c-label.a-no-trucate.a-color-artist, a.c-label.a-no-trucate.a-link"
+            )]
+            if len(artists) < len(titles):
+                artists += [el.get_attribute("innerText").strip() for el in
+                            d.find_elements(By.CSS_SELECTOR, "span.c-label.a-no-trucate")]
 
-        titles  = [t for t in titles  if t][:limit]
-        artists = [a for a in artists if a][:limit]
-        n = min(len(titles), len(artists))
-        if n == 0:
-            raise RuntimeError(f"No se pudo extraer datos de {url}")
+            titles  = [t for t in titles  if t][:limit]
+            artists = [a for a in artists if a][:limit]
+            n = min(len(titles), len(artists))
+            if n == 0:
+                raise RuntimeError(f"No se pudo extraer datos de {url}")
 
-        return list(zip(titles[:n], artists[:n]))
-    finally:
-        d.quit()
+            print(f"✅ Éxito: {n} items extraídos de {url}")
+            return list(zip(titles[:n], artists[:n]))
+            
+        except TimeoutException as e:
+            print(f"❌ Timeout en intento {attempt + 1}: {e}")
+            if attempt < max_retries - 1:
+                print(f"⏳ Esperando 5 segundos antes de reintentar...")
+                time.sleep(5)
+            else:
+                raise RuntimeError(f"Error después de {max_retries} intentos: Timeout al cargar {url}")
+        except Exception as e:
+            print(f"❌ Error en intento {attempt + 1}: {e}")
+            if attempt < max_retries - 1:
+                print(f"⏳ Esperando 5 segundos antes de reintentar...")
+                time.sleep(5)
+            else:
+                raise
+        finally:
+            d.quit()
 
 def compose_msg(title: str, pairs, k=3):
     lines = [f"🎵 {title}"]
@@ -117,26 +143,48 @@ def build_rows(chart, url, pairs, top_n=10):
 
 # ==== MAIN ====
 if __name__ == "__main__":
-    # scrape (hasta top 10 para guardar en Sheets)
-    ar_pairs = scrape_pairs(URL_AR, BANNED_AR, limit=10)
-    us_pairs = scrape_pairs(URL_US, BANNED_US, limit=10)
+    try:
+        print("=" * 60)
+        print("🎵 Iniciando scraping de Billboard Charts")
+        print("=" * 60)
+        
+        # scrape (hasta top 10 para guardar en Sheets)
+        print("\n📊 Scrapeando Billboard Argentina...")
+        ar_pairs = scrape_pairs(URL_AR, BANNED_AR, limit=10)
+        
+        print("\n📊 Scrapeando Billboard US Hot 100...")
+        us_pairs = scrape_pairs(URL_US, BANNED_US, limit=10)
 
-    # Telegram (Top 10)
-    msg = compose_msg("Top 10 Billboard Argentina (semana)", ar_pairs, 10) + \
-          "\n\n" + compose_msg("Top 10 Billboard Hot 100 (US)", us_pairs, 10)
+        # Telegram (Top 10)
+        print("\n📱 Preparando mensaje para Telegram...")
+        msg = compose_msg("Top 10 Billboard Argentina (semana)", ar_pairs, 10) + \
+              "\n\n" + compose_msg("Top 10 Billboard Hot 100 (US)", us_pairs, 10)
 
-    print(msg)
-    send_telegram(msg)
+        print("\n" + "=" * 60)
+        print(msg)
+        print("=" * 60)
+        
+        print("\n📤 Enviando a Telegram...")
+        send_telegram(msg)
 
-    # Google Sheets (Top 10)
-    rows = []
-    rows += build_rows("AR Hot 100", URL_AR, ar_pairs, top_n=10)
-    rows += build_rows("US Hot 100", URL_US, us_pairs, top_n=10)
-  
-    append_rows_dedup(
-        spreadsheet_id=os.getenv("GSHEET_ID"),
-        worksheet_name="chart_items",
-        rows=rows
-    )
-
+        # Google Sheets (Top 10)
+        print("\n📝 Preparando datos para Google Sheets...")
+        rows = []
+        rows += build_rows("AR Hot 100", URL_AR, ar_pairs, top_n=10)
+        rows += build_rows("US Hot 100", URL_US, us_pairs, top_n=10)
+      
+        print(f"📊 Guardando {len(rows)} filas en Google Sheets...")
+        append_rows_dedup(
+            spreadsheet_id=os.getenv("GSHEET_ID"),
+            worksheet_name="chart_items",
+            rows=rows
+        )
+        
+        print("\n✅ Proceso completado exitosamente!")
+        
+    except Exception as e:
+        error_msg = f"❌ Error crítico en el scraping: {str(e)[:200]}"
+        print("\n" + error_msg)
+        send_telegram(f"⚠️ {error_msg}")
+        raise
 
